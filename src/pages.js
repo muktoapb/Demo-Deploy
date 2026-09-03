@@ -153,7 +153,7 @@ function newSitePage(options) {
             <p class="section-description">The upload must contain an index.html file.</p>
           </div>
         </div>
-        <form class="form-surface upload-form" method="post" action="/sites" enctype="multipart/form-data">
+        <form class="form-surface upload-form" method="post" action="/sites" enctype="multipart/form-data" data-deploy-form>
           ${csrfField(csrfToken)}
           <div class="form-grid form-grid-three">
             <label>
@@ -193,7 +193,7 @@ function newSitePage(options) {
               <input name="spaFallback" type="checkbox" value="1" checked>
               <span>Use index.html for app routes</span>
             </label>
-            <button class="button button-primary" type="submit">Deploy site</button>
+            <button class="button button-primary" type="submit" data-deploy-button>Deploy site</button>
           </div>
         </form>
       </section>`
@@ -250,6 +250,17 @@ function settingsPage(options) {
             <button class="button button-secondary" type="submit">Update password</button>
           </form>
         </div>
+        <div class="settings-session">
+          <div>
+            <p class="overline">Session</p>
+            <h2>Signed in as ${escapeHtml(adminUser)}</h2>
+            <p>End your current dashboard session on this device.</p>
+          </div>
+          <form method="post" action="/logout">
+            ${csrfField(csrfToken)}
+            <button class="button button-secondary" type="submit">Sign out</button>
+          </form>
+        </div>
       </section>`
   });
 }
@@ -281,8 +292,8 @@ function appPage({
 
           <nav class="main-nav" aria-label="Dashboard navigation">
             ${navLink("/", "Overview", activePage === "overview")}
-            ${navLink("/sites", `Sites <span>${sites.length}</span>`, activePage === "sites")}
-            ${navLink("/sites/new", "New deployment", activePage === "new-site")}
+            ${navLink("/sites", "Sites", activePage === "sites", { count: sites.length })}
+            ${navLink("/sites/new", "New deployment", activePage === "new-site", { mobileLabel: "Deploy" })}
             ${navLink("/settings", "Settings", activePage === "settings")}
           </nav>
 
@@ -320,8 +331,15 @@ function appPage({
   });
 }
 
-function navLink(href, label, active) {
-  return `<a href="${href}"${active ? ` aria-current="page"` : ""}>${label}</a>`;
+function navLink(href, label, active, { count, mobileLabel = label } = {}) {
+  return `
+    <a href="${href}"${active ? ` aria-current="page"` : ""}>
+      <span class="nav-label">
+        <span class="nav-full">${escapeHtml(label)}</span>
+        <span class="nav-short">${escapeHtml(mobileLabel)}</span>
+      </span>
+      ${Number.isInteger(count) ? `<span class="nav-count">${count}</span>` : ""}
+    </a>`;
 }
 
 function recentList(sites, siteUrl) {
@@ -375,7 +393,7 @@ function siteCard(site, url, csrfToken) {
     <article class="site-card" data-site-card data-title="${escapeHtml(title.toLowerCase())}" data-slug="${escapeHtml(site.slug)}" data-group="${escapeHtml(groupKey)}">
       <div class="preview-canvas">
         <iframe src="${escapeHtml(url)}" title="${escapeHtml(title)} thumbnail" loading="lazy" sandbox="allow-scripts" tabindex="-1"></iframe>
-        <button type="button" data-preview-url="${escapeHtml(url)}" data-preview-name="${escapeHtml(title)}" aria-label="Preview ${escapeHtml(title)}">Preview</button>
+        <button type="button" data-preview-url="${escapeHtml(url)}" data-preview-name="${escapeHtml(title)}" aria-label="Preview ${escapeHtml(title)}"><span>Preview site</span></button>
       </div>
       <div class="site-card-body">
         <div class="site-title-row">

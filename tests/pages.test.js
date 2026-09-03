@@ -38,6 +38,7 @@ test("renders grouped site controls safely on the sites page", () => {
   assert.match(html, /href="\/sites" aria-current="page"/);
   assert.match(html, /data-site-group="Launches"/);
   assert.match(html, /data-preview-dialog/);
+  assert.match(html, /<span>Preview site<\/span>/);
   assert.match(html, /name="_csrf" value="signed-form-token"/);
   assert.match(html, /&lt;Acme&gt;/);
   assert.doesNotMatch(html, /<Acme>/);
@@ -59,6 +60,8 @@ test("renders account and password controls on the settings page", () => {
   assert.match(html, /<h1>Settings<\/h1>/);
   assert.match(html, /href="\/settings" aria-current="page"/);
   assert.match(html, /Change password/);
+  assert.match(html, /Signed in as admin/);
+  assert.match(html, /End your current dashboard session/);
   assert.match(html, /example.com/);
   assert.match(html, /100 MB per file/);
 });

@@ -23,6 +23,10 @@ previewDialog?.addEventListener("close", () => {
   previewFrame.src = "about:blank";
 });
 
+previewDialog?.addEventListener("click", (event) => {
+  if (event.target === previewDialog) previewDialog.close();
+});
+
 const searchInput = document.querySelector("[data-site-search]");
 const groupFilter = document.querySelector("[data-group-filter]");
 const siteCards = [...document.querySelectorAll("[data-site-card]")];
@@ -80,6 +84,15 @@ document.querySelectorAll("[data-delete-form]").forEach((form) => {
   });
 });
 
+document.querySelectorAll(".manage-box").forEach((details) => {
+  details.addEventListener("toggle", () => {
+    if (!details.open) return;
+    document.querySelectorAll(".manage-box[open]").forEach((other) => {
+      if (other !== details) other.open = false;
+    });
+  });
+});
+
 const titleInput = document.querySelector("[data-site-title]");
 const slugInput = document.querySelector("[data-site-slug]");
 let slugWasEdited = false;
@@ -98,12 +111,38 @@ titleInput?.addEventListener("input", () => {
     .slice(0, 63);
 });
 
-document.querySelectorAll(".file-choice input[type=file]").forEach((input) => {
+const uploadInputs = [...document.querySelectorAll(".file-choice input[type=file]")];
+const emptyUploadLabels = new Map(uploadInputs.map((input) => [
+  input,
+  input.closest(".file-choice").querySelector(".file-choice-value").textContent
+]));
+
+uploadInputs.forEach((input) => {
   input.addEventListener("change", () => {
-    const value = input.closest(".file-choice").querySelector(".file-choice-value");
+    const choice = input.closest(".file-choice");
+    const value = choice.querySelector(".file-choice-value");
     if (!input.files.length) return;
+
+    uploadInputs.forEach((other) => {
+      if (other === input) return;
+      other.value = "";
+      other.closest(".file-choice").classList.remove("has-file");
+      other.closest(".file-choice").querySelector(".file-choice-value").textContent =
+        emptyUploadLabels.get(other);
+    });
+
+    choice.classList.add("has-file");
     value.textContent = input.files.length === 1
       ? input.files[0].name
       : `${input.files.length} files selected`;
+  });
+});
+
+document.querySelectorAll("[data-deploy-form]").forEach((form) => {
+  form.addEventListener("submit", () => {
+    const button = form.querySelector("[data-deploy-button]");
+    form.setAttribute("aria-busy", "true");
+    button.disabled = true;
+    button.textContent = "Deploying...";
   });
 });
