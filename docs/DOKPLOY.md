@@ -57,14 +57,15 @@ Create a persistent volume in Dokploy and mount it at:
 
 This volume holds the site registry, the saved password hash, and every uploaded website. Deployments are disposable without this mount.
 
-## 5. Configure domains
+## 5. Configure the dashboard domain
 
-Route both host patterns to container port `3000`:
+In Dokploy, route only the base hostname to the `demo-deploy` service on port `3000`:
 
 ```text
 demos.example.com
-*.demos.example.com
 ```
+
+Do not add `*.demos.example.com` in Dokploy's domain form. Dokploy currently turns that value into the literal Traefik rule `Host(`*.demos.example.com`)`, which does not match real subdomains. The included `docker-compose.yml` creates the required `HostRegexp` routers automatically from `BASE_DOMAIN`.
 
 The base domain serves the dashboard. The `admin` subdomain is also reserved for the dashboard. Every other first-level subdomain is treated as a deployed site slug.
 
@@ -82,7 +83,7 @@ demos.example.com
 Wildcard certificates require DNS validation. Choose one of these approaches:
 
 - Configure a DNS challenge in the proxy using your DNS provider.
-- Put the records behind Cloudflare and use a Cloudflare Origin Certificate covering the base and wildcard names.
+- Put both DNS records behind Cloudflare and use **Full** mode. The included secure wildcard router terminates origin TLS; for **Full (strict)**, install a Cloudflare Origin Certificate covering the base and wildcard names.
 - Install a wildcard certificate from another certificate provider.
 
 Do not publish the service as HTTPS until both the dashboard and one test subdomain pass certificate validation.
@@ -102,6 +103,8 @@ Expected response:
 ```
 
 Sign in at `https://demos.example.com`, create a small test deployment, and confirm its generated subdomain loads over HTTPS.
+
+If the dashboard works but a site returns Traefik's plain `404 page not found`, inspect the running container labels. The wildcard rule must start with `HostRegexp`, not `Host`.
 
 ## 8. Back up
 

@@ -146,7 +146,7 @@ Demo Deploy can be deployed directly from this repository using the included Doc
 3. Select **Dockerfile** as the build type and use port `3000`.
 4. Add the production environment variables shown above.
 5. Create persistent storage and mount it at `/app/data`.
-6. Route both `demos.example.com` and `*.demos.example.com` to the application.
+6. Route only `demos.example.com` to the service in Dokploy. The included Compose labels route site subdomains with Traefik `HostRegexp`.
 7. Enable HTTPS for the base domain and install wildcard TLS coverage.
 8. Deploy and check `https://demos.example.com/healthz`.
 
@@ -230,7 +230,7 @@ To report a vulnerability, follow [SECURITY.md](SECURITY.md).
 
 ### The dashboard works but site subdomains do not
 
-Confirm that wildcard DNS points to the server, the reverse proxy accepts `*.demos.example.com`, and the proxy preserves the original `Host` header.
+Confirm that wildcard DNS points to the server and the proxy preserves the original `Host` header. When deploying as a Dokploy Compose service, do not add `*.demos.example.com` in Dokploy's domain form: it produces a literal `Host` rule. Use the included Compose labels, whose wildcard router uses `HostRegexp`.
 
 ### HTTPS works on the dashboard but not uploaded sites
 

@@ -13,6 +13,16 @@ services:
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-100}
     volumes:
       - demo-deploy-data:/app/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.demo-deploy-wildcard-web.rule=HostRegexp(`[a-z0-9-]+[.]${BASE_DOMAIN:-localhost}`)"
+      - "traefik.http.routers.demo-deploy-wildcard-web.entrypoints=web"
+      - "traefik.http.routers.demo-deploy-wildcard-web.service=demo-deploy-wildcard"
+      - "traefik.http.routers.demo-deploy-wildcard-websecure.rule=HostRegexp(`[a-z0-9-]+[.]${BASE_DOMAIN:-localhost}`)"
+      - "traefik.http.routers.demo-deploy-wildcard-websecure.entrypoints=websecure"
+      - "traefik.http.routers.demo-deploy-wildcard-websecure.tls=true"
+      - "traefik.http.routers.demo-deploy-wildcard-websecure.service=demo-deploy-wildcard"
+      - "traefik.http.services.demo-deploy-wildcard.loadbalancer.server.port=3000"
     restart: unless-stopped
 
 volumes:
