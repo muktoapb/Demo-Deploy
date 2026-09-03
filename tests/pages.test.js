@@ -38,6 +38,10 @@ test("renders grouped site controls safely on the sites page", () => {
   assert.match(html, /href="\/sites" aria-current="page"/);
   assert.match(html, /data-site-group="Launches"/);
   assert.match(html, /data-preview-dialog/);
+  assert.match(html, /data-preview-size="desktop"/);
+  assert.match(html, /data-preview-size="tablet"/);
+  assert.match(html, /data-preview-size="mobile"/);
+  assert.match(html, /class="nav-icon"/);
   assert.match(html, /<span>Preview site<\/span>/);
   assert.match(html, /name="_csrf" value="signed-form-token"/);
   assert.match(html, /&lt;Acme&gt;/);

@@ -3,6 +3,7 @@ const previewFrame = document.querySelector("[data-preview-frame]");
 const previewTitle = document.querySelector("[data-preview-title]");
 const previewAddress = document.querySelector("[data-preview-address]");
 const previewOpen = document.querySelector("[data-preview-open]");
+const previewSizeButtons = [...document.querySelectorAll("[data-preview-size]")];
 
 document.querySelectorAll("[data-preview-url]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -17,6 +18,15 @@ document.querySelectorAll("[data-preview-url]").forEach((button) => {
 
 document.querySelector("[data-preview-close]")?.addEventListener("click", () => {
   previewDialog.close();
+});
+
+previewSizeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    previewDialog.dataset.previewViewport = button.dataset.previewSize;
+    previewSizeButtons.forEach((option) => {
+      option.setAttribute("aria-pressed", String(option === button));
+    });
+  });
 });
 
 previewDialog?.addEventListener("close", () => {

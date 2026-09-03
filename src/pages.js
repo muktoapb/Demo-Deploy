@@ -291,10 +291,10 @@ function appPage({
           </a>
 
           <nav class="main-nav" aria-label="Dashboard navigation">
-            ${navLink("/", "Overview", activePage === "overview")}
-            ${navLink("/sites", "Sites", activePage === "sites", { count: sites.length })}
-            ${navLink("/sites/new", "New deployment", activePage === "new-site", { mobileLabel: "Deploy" })}
-            ${navLink("/settings", "Settings", activePage === "settings")}
+            ${navLink("/", "Overview", activePage === "overview", { icon: "home" })}
+            ${navLink("/sites", "Sites", activePage === "sites", { count: sites.length, icon: "panels" })}
+            ${navLink("/sites/new", "New deployment", activePage === "new-site", { icon: "upload", mobileLabel: "Deploy" })}
+            ${navLink("/settings", "Settings", activePage === "settings", { icon: "settings" })}
           </nav>
 
           <div class="sidebar-account">
@@ -331,9 +331,10 @@ function appPage({
   });
 }
 
-function navLink(href, label, active, { count, mobileLabel = label } = {}) {
+function navLink(href, label, active, { count, icon, mobileLabel = label } = {}) {
   return `
     <a href="${href}"${active ? ` aria-current="page"` : ""}>
+      <span class="nav-icon" aria-hidden="true">${iconSvg(icon)}</span>
       <span class="nav-label">
         <span class="nav-full">${escapeHtml(label)}</span>
         <span class="nav-short">${escapeHtml(mobileLabel)}</span>
@@ -455,19 +456,54 @@ function siteCard(site, url, csrfToken) {
 
 function previewDialog() {
   return `
-    <dialog class="preview-dialog" data-preview-dialog>
+    <dialog class="preview-dialog" data-preview-dialog data-preview-viewport="desktop">
       <div class="preview-bar">
-        <div>
+        <div class="preview-meta">
           <strong data-preview-title>Site preview</strong>
           <span data-preview-address></span>
         </div>
-        <div class="preview-actions">
-          <a class="button button-secondary" href="#" target="_blank" rel="noreferrer" data-preview-open>Open site</a>
-          <button class="button button-secondary" type="button" data-preview-close>Close</button>
+        <div class="preview-toolbar">
+          <div class="preview-sizes" role="group" aria-label="Preview viewport">
+            <button type="button" data-preview-size="desktop" aria-label="Desktop preview" aria-pressed="true" title="Desktop preview">
+              ${iconSvg("monitor")}
+            </button>
+            <button type="button" data-preview-size="tablet" aria-label="Tablet preview" aria-pressed="false" title="Tablet preview">
+              ${iconSvg("tablet")}
+            </button>
+            <button type="button" data-preview-size="mobile" aria-label="Mobile preview" aria-pressed="false" title="Mobile preview">
+              ${iconSvg("smartphone")}
+            </button>
+          </div>
+          <div class="preview-actions">
+            <a class="button button-secondary" href="#" target="_blank" rel="noreferrer" data-preview-open>
+              ${iconSvg("external-link")}<span>Open site</span>
+            </a>
+            <button class="icon-button" type="button" data-preview-close aria-label="Close preview" title="Close preview">
+              ${iconSvg("x")}
+            </button>
+          </div>
         </div>
       </div>
-      <iframe title="Site preview" sandbox="allow-scripts" data-preview-frame></iframe>
+      <div class="preview-stage">
+        <iframe title="Site preview" sandbox="allow-scripts" data-preview-frame></iframe>
+      </div>
     </dialog>`;
+}
+
+function iconSvg(name) {
+  const icons = {
+    "external-link": `<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>`,
+    home: `<path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>`,
+    monitor: `<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>`,
+    panels: `<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>`,
+    settings: `<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>`,
+    smartphone: `<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>`,
+    tablet: `<rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><line x1="12" x2="12.01" y1="18" y2="18"/>`,
+    upload: `<path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14a2 2 0 0 0 2-2v-4"/><path d="M3 15v4a2 2 0 0 0 2 2"/>`,
+    x: `<path d="M18 6 6 18"/><path d="m6 6 12 12"/>`
+  };
+
+  return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${icons[name] || ""}</svg>`;
 }
 
 function overviewEmptyState() {
