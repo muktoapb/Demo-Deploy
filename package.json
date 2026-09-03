@@ -1,0 +1,39 @@
+{
+  "name": "demo-deploy",
+  "version": "1.0.0",
+  "description": "A lightweight, self-hosted Netlify alternative for publishing static site demos on automatic subdomains.",
+  "keywords": [
+    "self-hosted",
+    "static-hosting",
+    "netlify-alternative",
+    "demo-sites",
+    "docker"
+  ],
+  "homepage": "https://github.com/muktoapb/Demo-Deploy#readme",
+  "bugs": {
+    "url": "https://github.com/muktoapb/Demo-Deploy/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muktoapb/Demo-Deploy.git"
+  },
+  "license": "MIT",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mime-types": "^2.1.35",
+    "multer": "^2.0.2",
+    "yauzl": "^3.2.0"
+  },
+  "overrides": {
+    "qs": "6.16.0"
+  }
+}

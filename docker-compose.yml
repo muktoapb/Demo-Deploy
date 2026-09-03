@@ -1,0 +1,19 @@
+services:
+  demo-deploy:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
+      PUBLIC_PROTOCOL: ${PUBLIC_PROTOCOL:-http}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+      SESSION_SECRET: ${SESSION_SECRET:-replace-this-secret-before-running-in-production}
+      DATA_DIR: /app/data
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-100}
+    volumes:
+      - demo-deploy-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  demo-deploy-data:
