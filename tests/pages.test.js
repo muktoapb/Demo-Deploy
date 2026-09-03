@@ -26,8 +26,8 @@ test("renders the overview as its own active page", () => {
   const html = dashboardPage(context);
 
   assert.match(html, /<h1>Overview<\/h1>/);
-  assert.match(html, /src="\/assets\/logo\.svg"/);
-  assert.match(html, /rel="icon" href="\/assets\/logo\.svg"/);
+  assert.match(html, /src="\/assets\/logo-generated\.png"/);
+  assert.match(html, /rel="icon" href="\/assets\/logo-generated\.png"/);
   assert.match(html, /href="\/" aria-current="page"/);
   assert.match(html, /Recent deployments/);
   assert.match(html, /href="\/sites\/new"/);
