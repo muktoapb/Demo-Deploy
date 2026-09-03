@@ -31,6 +31,7 @@ function loginPage({ error = "" } = {}) {
 function dashboardPage(options) {
   const { sites, siteUrl } = options;
   const groups = uniqueGroups(sites);
+  const totalViews = sites.reduce((sum, site) => sum + siteViewCount(site), 0);
   const recentSites = [...sites]
     .sort((a, b) => siteTimestamp(b) - siteTimestamp(a))
     .slice(0, 5);
@@ -51,6 +52,10 @@ function dashboardPage(options) {
         <article class="metric">
           <div class="metric-heading"><span>Client groups</span><i>${iconSvg("users")}</i></div>
           <strong>${groups.length}</strong>
+        </article>
+        <article class="metric">
+          <div class="metric-heading"><span>Unique views</span><i>${iconSvg("eye")}</i></div>
+          <strong>${formatInteger(totalViews)}</strong>
         </article>
         <article class="metric metric-wide">
           <div class="metric-heading"><span>Last published</span><i>${iconSvg("clock")}</i></div>
@@ -176,6 +181,21 @@ function newSitePage(options) {
           <datalist id="group-options">
             ${groups.map((group) => `<option value="${escapeHtml(group)}"></option>`).join("")}
           </datalist>
+          <fieldset class="deployment-access">
+            <legend>Visitor access</legend>
+            <div class="deployment-access-row">
+              <label class="manage-switch">
+                <input name="passwordProtected" type="checkbox" value="1" data-protection-toggle>
+                <span class="switch-control" aria-hidden="true"></span>
+                <span><strong>Password protect this site</strong><small>Require a password before clients can view it.</small></span>
+              </label>
+              <label class="manage-password-field" data-protection-field hidden>
+                <span>Visitor password</span>
+                <input name="sitePassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" disabled data-protection-password data-has-password="false">
+                <small>Share this password only with people who should see the demo.</small>
+              </label>
+            </div>
+          </fieldset>
           <div class="upload-grid">
             <label class="file-choice">
               <span class="file-choice-icon" aria-hidden="true">${iconSvg("archive")}</span>
@@ -313,6 +333,13 @@ function appPage({
           </div>
         </aside>
 
+        <header class="mobile-brandbar">
+          <a class="brand-lockup" href="/" aria-label="Demo Deploy overview">
+            <img class="brand-logo" src="/assets/logo-generated.png" alt="" width="32" height="32">
+            <span>Demo Deploy</span>
+          </a>
+        </header>
+
         <main class="main-content">
           <header class="page-header">
             <div>
@@ -393,20 +420,24 @@ function siteGroups(sites, siteUrl, groups, csrfToken) {
           <span>${groupedSites.length}</span>
         </div>
         <div class="site-grid">
-          ${groupedSites.map((site) => siteCard(site, siteUrl(site.slug), csrfToken)).join("")}
+          ${groupedSites.map((site) => siteCard(site, siteUrl(site.slug))).join("")}
         </div>
+        ${groupedSites.map((site) => manageDialog(site, site.title || site.slug, siteUrl(site.slug), csrfToken)).join("")}
       </section>`;
   }).join("");
 }
 
-function siteCard(site, url, csrfToken) {
+function siteCard(site, url) {
   const groupKey = site.group || "__ungrouped";
   const title = site.title || site.slug;
+  const views = siteViewCount(site);
+  const paused = Boolean(site.access?.paused);
+  const passwordProtected = Boolean(site.access?.password);
+  const manageId = manageDialogId(site.slug);
   return `
     <article class="site-card" data-site-card data-title="${escapeHtml(title.toLowerCase())}" data-slug="${escapeHtml(site.slug)}" data-group="${escapeHtml(groupKey)}">
       <div class="preview-canvas">
         <iframe src="${escapeHtml(url)}" title="${escapeHtml(title)} thumbnail" loading="lazy" sandbox="allow-scripts" tabindex="-1"></iframe>
-        <button type="button" data-preview-url="${escapeHtml(url)}" data-preview-name="${escapeHtml(title)}" aria-label="Preview ${escapeHtml(title)}"><span>Preview site</span></button>
       </div>
       <div class="site-card-body">
         <div class="site-title-row">
@@ -414,20 +445,60 @@ function siteCard(site, url, csrfToken) {
             <h4>${escapeHtml(title)}</h4>
             <a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(urlLabel(url))}</a>
           </div>
-          <span class="status"><i></i>Live</span>
+          <div class="site-statuses">
+            ${passwordProtected ? `<span class="access-badge" title="Password protected" aria-label="Password protected">${iconSvg("lock")}</span>` : ""}
+            <span class="status${paused ? " status-paused" : ""}"><i></i>${paused ? "Paused" : "Live"}</span>
+          </div>
         </div>
-        <p class="site-date">Published ${formatDate(site.deployedAt || site.updatedAt || site.createdAt)}</p>
+        <div class="site-meta">
+          <p class="site-date">Published ${formatDate(site.deployedAt || site.updatedAt || site.createdAt)}</p>
+          <p class="site-views">${iconSvg("eye")}<span>${formatInteger(views)} ${views === 1 ? "view" : "views"}</span></p>
+        </div>
         <div class="site-actions">
-          <button class="button button-secondary" type="button" data-preview-url="${escapeHtml(url)}" data-preview-name="${escapeHtml(title)}">${iconSvg("eye")}<span>Preview</span></button>
-          <button class="button button-quiet" type="button" data-copy-url="${escapeHtml(url)}">${iconSvg("copy")}<span>Copy URL</span></button>
-          <a class="button button-quiet" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${iconSvg("external-link")}<span>Open</span></a>
+          <button class="button button-secondary site-preview-button" type="button" data-preview-url="${escapeHtml(url)}" data-preview-name="${escapeHtml(title)}">${iconSvg("eye")}<span>Preview</span></button>
+          <div class="site-action-icons">
+            <button class="icon-button" type="button" data-copy-url="${escapeHtml(url)}" aria-label="Copy ${escapeHtml(title)} URL" title="Copy URL">${iconSvg("copy")}<span class="sr-only">Copy URL</span></button>
+            <a class="icon-button" href="${escapeHtml(url)}" target="_blank" rel="noreferrer" aria-label="Open ${escapeHtml(title)} in a new tab" title="Open site">${iconSvg("external-link")}</a>
+            <button class="icon-button manage-button" type="button" data-manage-open="${escapeHtml(site.slug)}" aria-haspopup="dialog" aria-controls="${escapeHtml(manageId)}" aria-label="Manage ${escapeHtml(title)}" title="Manage site">${iconSvg("settings")}</button>
+          </div>
         </div>
-        <details class="manage-box">
-          <summary>Manage site</summary>
-          <div class="manage-content">
-            <form class="manage-form" method="post" action="/sites/${encodeURIComponent(site.slug)}/settings">
-              ${csrfField(csrfToken)}
-              <h5>Site details</h5>
+      </div>
+    </article>`;
+}
+
+function manageDialog(site, title, url, csrfToken) {
+  const manageId = manageDialogId(site.slug);
+  const titleId = `${manageId}-title`;
+  const paused = Boolean(site.access?.paused);
+  const passwordProtected = Boolean(site.access?.password);
+  return `
+    <dialog class="manage-dialog" id="${escapeHtml(manageId)}" data-manage-dialog="${escapeHtml(site.slug)}" aria-labelledby="${escapeHtml(titleId)}">
+      <div class="manage-bar">
+        <div class="manage-site">
+          <span class="manage-site-mark" aria-hidden="true">${escapeHtml(title.charAt(0).toUpperCase())}</span>
+          <div>
+            <span class="manage-eyebrow">Site settings</span>
+            <strong id="${escapeHtml(titleId)}">${escapeHtml(title)}</strong>
+            <a href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${escapeHtml(urlLabel(url))}</a>
+          </div>
+        </div>
+        <div class="manage-bar-actions">
+          <span class="status${paused ? " status-paused" : ""}"><i></i>${paused ? "Paused" : "Live"}</span>
+          <a class="icon-button" href="${escapeHtml(url)}" target="_blank" rel="noreferrer" aria-label="Open ${escapeHtml(title)} in a new tab" title="Open site">${iconSvg("external-link")}</a>
+          <button class="icon-button" type="button" data-manage-close aria-label="Close manage dialog" title="Close manage dialog">${iconSvg("x")}</button>
+        </div>
+      </div>
+      <div class="manage-content">
+        <section class="manage-section">
+          <div class="manage-section-heading">
+            <div>
+              <h3>Site details</h3>
+              <p>Update how this deployment appears in your workspace.</p>
+            </div>
+          </div>
+          <form class="manage-form" method="post" action="/sites/${encodeURIComponent(site.slug)}/settings">
+            ${csrfField(csrfToken)}
+            <div class="manage-field-grid">
               <label>
                 <span>Name</span>
                 <input name="title" value="${escapeHtml(title)}" maxlength="120" required>
@@ -436,34 +507,82 @@ function siteCard(site, url, csrfToken) {
                 <span>Client / group</span>
                 <input name="group" value="${escapeHtml(site.group || "")}" list="group-options" maxlength="60" placeholder="Ungrouped">
               </label>
-              <label class="check-row">
-                <input name="spaFallback" type="checkbox" value="1" ${site.spaFallback ? "checked" : ""}>
-                <span>Use index.html for app routes</span>
+            </div>
+            <div class="manage-access-grid">
+              <label class="manage-switch">
+                <input name="active" type="checkbox" value="1" ${paused ? "" : "checked"}>
+                <span class="switch-control" aria-hidden="true"></span>
+                <span><strong>Site is live</strong><small>Turn off to pause public access.</small></span>
               </label>
-              <button class="button button-secondary" type="submit">Save details</button>
-            </form>
-            <form class="manage-form" method="post" action="/sites/${encodeURIComponent(site.slug)}/redeploy" enctype="multipart/form-data">
-              ${csrfField(csrfToken)}
-              <h5>Replace files</h5>
+              <label class="manage-switch">
+                <input name="passwordProtected" type="checkbox" value="1" ${passwordProtected ? "checked" : ""} data-protection-toggle>
+                <span class="switch-control" aria-hidden="true"></span>
+                <span><strong>Password protection</strong><small>Require a password before viewing.</small></span>
+              </label>
+            </div>
+            <label class="manage-password-field" data-protection-field ${passwordProtected ? "" : "hidden"}>
+              <span>${passwordProtected ? "New visitor password" : "Visitor password"}</span>
+              <input name="sitePassword" type="password" autocomplete="new-password" minlength="8" placeholder="${passwordProtected ? "Leave blank to keep current password" : "At least 8 characters"}" ${passwordProtected ? "" : "disabled"} data-protection-password data-has-password="${passwordProtected}">
+              <small>${passwordProtected ? "Leave blank to keep the existing password." : "Share this password with people who should see the demo."}</small>
+            </label>
+            <label class="check-row manage-toggle">
+              <input name="spaFallback" type="checkbox" value="1" ${site.spaFallback ? "checked" : ""}>
+              <span><strong>Single-page app fallback</strong><small>Use index.html when a requested route is not found.</small></span>
+            </label>
+            <div class="manage-form-actions">
+              <button class="button button-primary" type="submit">Save changes</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="manage-section">
+          <div class="manage-section-heading">
+            <div>
+              <h3>Replace deployment</h3>
+              <p>Publish a new ZIP archive or website folder to this address.</p>
+            </div>
+          </div>
+          <form class="manage-form" method="post" action="/sites/${encodeURIComponent(site.slug)}/redeploy" enctype="multipart/form-data">
+            ${csrfField(csrfToken)}
+            <div class="manage-upload-grid">
               <label class="compact-file">
-                <span>ZIP archive</span>
+                <span class="compact-file-heading">
+                  ${iconSvg("archive")}
+                  <span><strong>ZIP archive</strong><small>Choose one .zip file</small></span>
+                </span>
                 <input name="archive" type="file" accept=".zip,application/zip">
               </label>
               <label class="compact-file">
-                <span>Website folder</span>
+                <span class="compact-file-heading">
+                  ${iconSvg("folder")}
+                  <span><strong>Website folder</strong><small>Select a folder containing index.html</small></span>
+                </span>
                 <input name="files" type="file" webkitdirectory directory multiple>
               </label>
-              <input name="spaFallback" type="hidden" value="${site.spaFallback ? "1" : "0"}">
-              <button class="button button-secondary" type="submit">Redeploy</button>
-            </form>
-            <form class="delete-form" method="post" action="/sites/${encodeURIComponent(site.slug)}/delete" data-delete-form="${escapeHtml(title)}">
-              ${csrfField(csrfToken)}
-              <button class="button button-danger" type="submit">Delete site</button>
-            </form>
+            </div>
+            <input name="spaFallback" type="hidden" value="${site.spaFallback ? "1" : "0"}">
+            <div class="manage-form-actions">
+              <button class="button button-secondary" type="submit">${iconSvg("upload")}<span>Redeploy site</span></button>
+            </div>
+          </form>
+        </section>
+
+        <section class="manage-section manage-danger">
+          <div>
+            <h3>Delete site</h3>
+            <p>Permanently remove this deployment and all uploaded files.</p>
           </div>
-        </details>
+          <form class="delete-form" method="post" action="/sites/${encodeURIComponent(site.slug)}/delete" data-delete-form="${escapeHtml(title)}">
+            ${csrfField(csrfToken)}
+            <button class="button button-danger" type="submit">Delete site</button>
+          </form>
+        </section>
       </div>
-    </article>`;
+    </dialog>`;
+}
+
+function manageDialogId(slug) {
+  return `manage-${slug}`;
 }
 
 function previewDialog() {
@@ -497,7 +616,7 @@ function previewDialog() {
         </div>
       </div>
       <div class="preview-stage">
-        <iframe title="Site preview" sandbox="allow-scripts" data-preview-frame></iframe>
+        <iframe title="Site preview" sandbox="allow-scripts allow-forms allow-same-origin" data-preview-frame></iframe>
       </div>
     </dialog>`;
 }
@@ -516,6 +635,7 @@ function iconSvg(name) {
     home: `<path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>`,
     key: `<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>`,
     "log-out": `<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>`,
+    lock: `<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>`,
     monitor: `<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>`,
     panels: `<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>`,
     settings: `<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>`,
@@ -577,6 +697,16 @@ function csrfField(token) {
 
 function siteTimestamp(site) {
   return new Date(site.deployedAt || site.updatedAt || site.createdAt || 0).getTime();
+}
+
+function siteViewCount(site) {
+  if (Number.isInteger(site.views?.count)) return site.views.count;
+  if (Array.isArray(site.views?.visitorHashes)) return site.views.visitorHashes.length;
+  return 0;
+}
+
+function formatInteger(value) {
+  return new Intl.NumberFormat("en").format(value);
 }
 
 function urlLabel(url) {

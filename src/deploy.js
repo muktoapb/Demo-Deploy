@@ -41,12 +41,24 @@ function cleanUploadPath(uploadPath) {
   return parts.join("/");
 }
 
-async function deploySite({ slug, title, group, files, spaFallback, replaceExisting = false }) {
+async function deploySite({
+  slug,
+  title,
+  group,
+  files,
+  spaFallback,
+  passwordProtected = false,
+  sitePassword = "",
+  replaceExisting = false
+}) {
   if (!validateSlug(slug)) {
     throw new Error("Use a subdomain with letters, numbers, and dashes only.");
   }
   if (!replaceExisting && await findSite(slug)) {
     throw new Error("That subdomain already exists. Use Manage site to redeploy it.");
+  }
+  if (passwordProtected && String(sitePassword).length < 8) {
+    throw new Error("Site password must be at least 8 characters.");
   }
 
   const source = selectUploadSource(files);
@@ -86,6 +98,8 @@ async function deploySite({ slug, title, group, files, spaFallback, replaceExist
       title: title || slug,
       group,
       spaFallback: Boolean(spaFallback),
+      passwordProtected: Boolean(passwordProtected),
+      sitePassword,
       deployedAt: new Date().toISOString()
     });
   } catch (error) {

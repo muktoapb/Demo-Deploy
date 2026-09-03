@@ -179,10 +179,12 @@ module.exports = {
   changeAdminPassword,
   clearLoginCookie,
   createCsrfToken,
+  hashPassword,
   needsPasswordChange,
   requireAuth,
   requireCsrf,
   setLoginCookie,
   verifyAdminCredentials,
+  verifyPassword,
   verifyToken
 };

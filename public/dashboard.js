@@ -74,11 +74,16 @@ document.querySelectorAll("[data-copy-url]").forEach((button) => {
   button.addEventListener("click", async () => {
     const label = button.querySelector("span");
     const originalText = label?.textContent || button.textContent;
+    const originalAriaLabel = button.getAttribute("aria-label");
     try {
       await navigator.clipboard.writeText(button.dataset.copyUrl);
+      button.dataset.copied = "true";
+      button.setAttribute("aria-label", "URL copied");
       if (label) label.textContent = "Copied";
       else button.textContent = "Copied";
       setTimeout(() => {
+        delete button.dataset.copied;
+        if (originalAriaLabel) button.setAttribute("aria-label", originalAriaLabel);
         if (label) label.textContent = originalText;
         else button.textContent = originalText;
       }, 1500);
@@ -97,13 +102,55 @@ document.querySelectorAll("[data-delete-form]").forEach((form) => {
   });
 });
 
-document.querySelectorAll(".manage-box").forEach((details) => {
-  details.addEventListener("toggle", () => {
-    if (!details.open) return;
-    document.querySelectorAll(".manage-box[open]").forEach((other) => {
-      if (other !== details) other.open = false;
-    });
+document.querySelectorAll("[data-manage-open]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const dialog = document.querySelector(`[data-manage-dialog="${button.dataset.manageOpen}"]`);
+    if (!dialog) return;
+
+    if (typeof dialog.showModal === "function") {
+      dialog.showModal();
+      return;
+    }
+
+    dialog.setAttribute("open", "");
   });
+});
+
+document.querySelectorAll("[data-manage-dialog]").forEach((dialog) => {
+  dialog.querySelector("[data-manage-close]")?.addEventListener("click", () => {
+    closeDialog(dialog);
+  });
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) closeDialog(dialog);
+  });
+});
+
+function closeDialog(dialog) {
+  if (typeof dialog.close === "function") {
+    dialog.close();
+    return;
+  }
+
+  dialog.removeAttribute("open");
+}
+
+document.querySelectorAll("[data-protection-toggle]").forEach((toggle) => {
+  const form = toggle.closest("form");
+  const field = form?.querySelector("[data-protection-field]");
+  const password = form?.querySelector("[data-protection-password]");
+  if (!field || !password) return;
+
+  const syncProtectionField = () => {
+    const enabled = toggle.checked;
+    const hasPassword = password.dataset.hasPassword === "true";
+    field.hidden = !enabled;
+    password.disabled = !enabled;
+    password.required = enabled && !hasPassword;
+  };
+
+  toggle.addEventListener("change", syncProtectionField);
+  syncProtectionField();
 });
 
 const titleInput = document.querySelector("[data-site-title]");

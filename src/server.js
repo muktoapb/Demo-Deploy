@@ -154,7 +154,9 @@ app.post("/sites", upload.any(), requireCsrf, async (req, res) => {
       title,
       group: req.body.group,
       files: req.files,
-      spaFallback: req.body.spaFallback === "1"
+      spaFallback: req.body.spaFallback === "1",
+      passwordProtected: req.body.passwordProtected === "1",
+      sitePassword: req.body.sitePassword
     });
     res.redirect(`/sites?ok=${encodeURIComponent(`${slug} is live.`)}`);
   });
@@ -183,7 +185,10 @@ app.post("/sites/:slug/settings", async (req, res) => {
     await updateSiteMetadata(req.params.slug, {
       title: req.body.title,
       group: req.body.group,
-      spaFallback: req.body.spaFallback === "1"
+      spaFallback: req.body.spaFallback === "1",
+      paused: req.body.active !== "1",
+      passwordProtected: req.body.passwordProtected === "1",
+      sitePassword: req.body.sitePassword
     });
     res.redirect(`/sites?ok=${encodeURIComponent(`${req.params.slug} settings saved.`)}`);
   } catch (error) {

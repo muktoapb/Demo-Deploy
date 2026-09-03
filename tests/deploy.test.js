@@ -8,9 +8,12 @@ const assert = require("node:assert/strict");
 process.env.DATA_DIR = fsSync.mkdtempSync(path.join(os.tmpdir(), "demo-deploy-data-"));
 
 const { cleanUploadPath, deploySite, validateSlug } = require("../src/deploy");
+const { verifyPassword } = require("../src/auth");
 const {
   findSite,
+  recordSiteView,
   siteCurrentDir,
+  siteViewCount,
   updateSiteMetadata,
   upsertSite
 } = require("../src/storage");
@@ -39,6 +42,8 @@ test("deploys a browser folder upload and promotes one root folder", async () =>
     title: "Folder Demo",
     group: "Acme",
     spaFallback: true,
+    passwordProtected: true,
+    sitePassword: "client-access",
     files: [
       {
         fieldname: "files",
@@ -55,6 +60,8 @@ test("deploys a browser folder upload and promotes one root folder", async () =>
   assert.equal(site.title, "Folder Demo");
   assert.equal(site.group, "Acme");
   assert.equal(site.spaFallback, true);
+  assert.equal(await verifyPassword("client-access", site.access.password), true);
+  assert.equal(JSON.stringify(site).includes("client-access"), false);
   assert.equal(html, "<h1>Hello</h1>");
 
   await assert.rejects(
@@ -91,6 +98,56 @@ test("updates site details without replacing deployment metadata", async () => {
   assert.equal(updated.group, "Northwind");
   assert.equal(updated.spaFallback, true);
   assert.equal(updated.deployedAt, "2026-01-01T00:00:00.000Z");
+});
+
+test("stores site access controls without persisting the visitor password", async () => {
+  await upsertSite({
+    slug: "private-demo",
+    title: "Private demo",
+    group: "",
+    spaFallback: false
+  });
+
+  const protectedSite = await updateSiteMetadata("private-demo", {
+    title: "Private demo",
+    group: "Client",
+    spaFallback: false,
+    paused: true,
+    passwordProtected: true,
+    sitePassword: "client-access"
+  });
+
+  assert.equal(protectedSite.access.paused, true);
+  assert.equal(await verifyPassword("client-access", protectedSite.access.password), true);
+  assert.equal(JSON.stringify(protectedSite).includes("client-access"), false);
+
+  const retainedPassword = await updateSiteMetadata("private-demo", {
+    title: "Private demo",
+    group: "Client",
+    spaFallback: false,
+    paused: false,
+    passwordProtected: true,
+    sitePassword: ""
+  });
+  assert.equal(retainedPassword.access.password.key, protectedSite.access.password.key);
+});
+
+test("records one unique view per site IP", async () => {
+  await upsertSite({
+    slug: "view-demo",
+    title: "View Demo",
+    group: "",
+    spaFallback: false
+  });
+
+  assert.equal(await recordSiteView("view-demo", "203.0.113.10"), true);
+  assert.equal(await recordSiteView("view-demo", "203.0.113.10"), false);
+  assert.equal(await recordSiteView("view-demo", "203.0.113.11"), true);
+
+  const site = await findSite("view-demo");
+  assert.equal(siteViewCount(site), 2);
+  assert.equal(site.views.visitorHashes.length, 2);
+  assert.equal(site.views.visitorHashes.includes("203.0.113.10"), false);
 });
 
 test("rejects invalid persisted site metadata", async () => {

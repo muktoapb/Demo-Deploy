@@ -13,6 +13,7 @@ It is designed for freelancers, agencies, and small teams that regularly share H
 - Provides sandboxed thumbnails and full-page previews
 - Organizes deployments by client or project group
 - Searches, filters, edits, redeploys, and deletes sites
+- Pauses individual sites and password-protects client demos
 - Supports SPA fallback to `index.html`
 - Stores everything on one persistent disk volume
 - Protects the admin with signed sessions, hashed passwords, and CSRF tokens
@@ -20,7 +21,7 @@ It is designed for freelancers, agencies, and small teams that regularly share H
 
 ## What it does not do
 
-Demo Deploy serves already-built static files. It does not run framework builds, deploy from Git, provide serverless functions, collect analytics, or manage multiple user roles. Build React, Vue, Astro, or similar projects first, then upload the generated output directory.
+Demo Deploy serves already-built static files. It does not run framework builds, deploy from Git, provide serverless functions, provide detailed analytics, or manage multiple user roles. Build React, Vue, Astro, or similar projects first, then upload the generated output directory.
 
 ## Pages
 
@@ -220,6 +221,7 @@ The persistent volume is not replaced during rebuilds. Back it up before upgrade
 - Use a unique admin password and change it from Settings when needed.
 - Do not expose port `3000` directly when a reverse proxy is available.
 - Uploaded sites are untrusted content and are isolated from the admin by subdomains and sandboxed previews.
+- Visitor passwords are stored as salted scrypt hashes; the original password cannot be recovered from the data volume.
 - Only upload files you are allowed to host.
 
 To report a vulnerability, follow [SECURITY.md](SECURITY.md).
