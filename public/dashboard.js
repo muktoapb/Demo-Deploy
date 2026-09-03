@@ -72,12 +72,15 @@ groupFilter?.addEventListener("change", filterSites);
 
 document.querySelectorAll("[data-copy-url]").forEach((button) => {
   button.addEventListener("click", async () => {
-    const originalText = button.textContent;
+    const label = button.querySelector("span");
+    const originalText = label?.textContent || button.textContent;
     try {
       await navigator.clipboard.writeText(button.dataset.copyUrl);
-      button.textContent = "Copied";
+      if (label) label.textContent = "Copied";
+      else button.textContent = "Copied";
       setTimeout(() => {
-        button.textContent = originalText;
+        if (label) label.textContent = originalText;
+        else button.textContent = originalText;
       }, 1500);
     } catch {
       window.prompt("Copy this URL", button.dataset.copyUrl);

@@ -22,7 +22,7 @@ function loginPage({ error = "" } = {}) {
             <span>Password</span>
             <input name="password" type="password" autocomplete="current-password" required>
           </label>
-          <button class="button button-primary button-full" type="submit">Sign in</button>
+          <button class="button button-primary button-full" type="submit"><span>Sign in</span>${iconSvg("arrow-right")}</button>
         </form>
       </main>`
   });
@@ -41,19 +41,19 @@ function dashboardPage(options) {
     activePage: "overview",
     pageTitle: "Overview",
     overline: "Workspace",
-    action: `<a class="button button-primary" href="/sites/new">Deploy site</a>`,
+    action: `<a class="button button-primary" href="/sites/new">${iconSvg("upload")}<span>Deploy site</span></a>`,
     content: `
       <section class="summary-grid" aria-label="Deployment summary">
         <article class="metric">
-          <span>Live sites</span>
+          <div class="metric-heading"><span>Live sites</span><i>${iconSvg("panels")}</i></div>
           <strong>${sites.length}</strong>
         </article>
         <article class="metric">
-          <span>Client groups</span>
+          <div class="metric-heading"><span>Client groups</span><i>${iconSvg("users")}</i></div>
           <strong>${groups.length}</strong>
         </article>
         <article class="metric metric-wide">
-          <span>Last published</span>
+          <div class="metric-heading"><span>Last published</span><i>${iconSvg("clock")}</i></div>
           <strong>${latestSite ? escapeHtml(latestSite.title || latestSite.slug) : "No deployments"}</strong>
           <small>${latestSite ? formatDate(latestSite.deployedAt || latestSite.updatedAt) : ""}</small>
         </article>
@@ -78,9 +78,9 @@ function dashboardPage(options) {
           </div>
         </div>
         <div class="action-grid">
-          <a href="/sites/new"><strong>Deploy a site</strong><span>Upload a ZIP archive or website folder.</span></a>
-          <a href="/sites"><strong>Manage sites</strong><span>Preview, organize, update, or remove deployments.</span></a>
-          <a href="/settings"><strong>Account settings</strong><span>Review server details and update your password.</span></a>
+          ${actionLink("/sites/new", "upload", "Deploy a site", "Upload a ZIP archive or website folder.")}
+          ${actionLink("/sites", "panels", "Manage sites", "Preview, organize, update, or remove deployments.")}
+          ${actionLink("/settings", "settings", "Account settings", "Review server details and update your password.")}
         </div>
       </section>`
   });
@@ -95,7 +95,7 @@ function sitesPage(options) {
     activePage: "sites",
     pageTitle: "Sites",
     overline: "Deployments",
-    action: `<a class="button button-primary" href="/sites/new">New deployment</a>`,
+    action: `<a class="button button-primary" href="/sites/new">${iconSvg("upload")}<span>New deployment</span></a>`,
     content: `
       <section class="workspace-section page-section">
         <div class="section-heading">
@@ -110,6 +110,7 @@ function sitesPage(options) {
           <div class="site-toolbar">
             <label class="search-field">
               <span class="sr-only">Search sites</span>
+              <i aria-hidden="true">${iconSvg("search")}</i>
               <input type="search" placeholder="Search sites or subdomains" data-site-search>
             </label>
             <label>
@@ -177,12 +178,14 @@ function newSitePage(options) {
           </datalist>
           <div class="upload-grid">
             <label class="file-choice">
+              <span class="file-choice-icon" aria-hidden="true">${iconSvg("archive")}</span>
               <span class="file-choice-title">ZIP archive</span>
               <span class="file-choice-value">Choose one .zip file</span>
               <input name="archive" type="file" accept=".zip,application/zip">
             </label>
             <span class="upload-or">or</span>
             <label class="file-choice">
+              <span class="file-choice-icon" aria-hidden="true">${iconSvg("folder")}</span>
               <span class="file-choice-title">Website folder</span>
               <span class="file-choice-value">Choose a folder with index.html</span>
               <input name="files" type="file" webkitdirectory directory multiple>
@@ -193,7 +196,7 @@ function newSitePage(options) {
               <input name="spaFallback" type="checkbox" value="1" checked>
               <span>Use index.html for app routes</span>
             </label>
-            <button class="button button-primary" type="submit" data-deploy-button>Deploy site</button>
+            <button class="button button-primary" type="submit" data-deploy-button>${iconSvg("upload")}<span>Deploy site</span></button>
           </div>
         </form>
       </section>`
@@ -216,7 +219,7 @@ function settingsPage(options) {
     content: `
       <section class="workspace-section page-section">
         <div class="settings-layout">
-          <div class="settings-summary">
+          <div class="settings-summary form-surface">
             <p class="overline">Server</p>
             <h2>Installation details</h2>
             <dl>
@@ -247,7 +250,7 @@ function settingsPage(options) {
                 <input name="confirmPassword" type="password" autocomplete="new-password" minlength="12" required>
               </label>
             </div>
-            <button class="button button-secondary" type="submit">Update password</button>
+            <button class="button button-secondary" type="submit">${iconSvg("key")}<span>Update password</span></button>
           </form>
         </div>
         <div class="settings-session">
@@ -258,7 +261,7 @@ function settingsPage(options) {
           </div>
           <form method="post" action="/logout">
             ${csrfField(csrfToken)}
-            <button class="button button-secondary" type="submit">Sign out</button>
+            <button class="button button-secondary" type="submit">${iconSvg("log-out")}<span>Sign out</span></button>
           </form>
         </div>
       </section>`
@@ -320,9 +323,9 @@ function appPage({
           </header>
 
           <div class="notice-stack" aria-live="polite">
-            ${needsPasswordChange ? `<p class="warning">Change the default password in <a href="/settings">Settings</a> before publishing this dashboard.</p>` : ""}
-            ${message ? `<p class="success">${escapeHtml(message)}</p>` : ""}
-            ${error ? `<p class="alert" role="alert">${escapeHtml(error)}</p>` : ""}
+            ${needsPasswordChange ? `<p class="notice warning">${iconSvg("triangle-alert")}<span>Change the default password in <a href="/settings">Settings</a> before publishing this dashboard.</span></p>` : ""}
+            ${message ? `<p class="notice success">${iconSvg("circle-check")}<span>${escapeHtml(message)}</span></p>` : ""}
+            ${error ? `<p class="notice alert" role="alert">${iconSvg("circle-alert")}<span>${escapeHtml(error)}</span></p>` : ""}
           </div>
 
           ${content}
@@ -343,6 +346,15 @@ function navLink(href, label, active, { count, icon, mobileLabel = label } = {})
     </a>`;
 }
 
+function actionLink(href, icon, title, description) {
+  return `
+    <a href="${href}">
+      <span class="action-icon" aria-hidden="true">${iconSvg(icon)}</span>
+      <span class="action-copy"><strong>${title}</strong><span>${description}</span></span>
+      <span class="action-arrow" aria-hidden="true">${iconSvg("arrow-right")}</span>
+    </a>`;
+}
+
 function recentList(sites, siteUrl) {
   return `
     <div class="recent-list">
@@ -359,7 +371,7 @@ function recentList(sites, siteUrl) {
             <time datetime="${escapeHtml(site.deployedAt || site.updatedAt || site.createdAt || "")}">
               ${formatDate(site.deployedAt || site.updatedAt || site.createdAt)}
             </time>
-            <a class="button button-quiet" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">Open</a>
+            <a class="button button-quiet" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${iconSvg("external-link")}<span>Open</span></a>
           </article>`;
       }).join("")}
     </div>`;
@@ -406,9 +418,9 @@ function siteCard(site, url, csrfToken) {
         </div>
         <p class="site-date">Published ${formatDate(site.deployedAt || site.updatedAt || site.createdAt)}</p>
         <div class="site-actions">
-          <button class="button button-secondary" type="button" data-preview-url="${escapeHtml(url)}" data-preview-name="${escapeHtml(title)}">Preview</button>
-          <button class="button button-quiet" type="button" data-copy-url="${escapeHtml(url)}">Copy URL</button>
-          <a class="button button-quiet" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">Open</a>
+          <button class="button button-secondary" type="button" data-preview-url="${escapeHtml(url)}" data-preview-name="${escapeHtml(title)}">${iconSvg("eye")}<span>Preview</span></button>
+          <button class="button button-quiet" type="button" data-copy-url="${escapeHtml(url)}">${iconSvg("copy")}<span>Copy URL</span></button>
+          <a class="button button-quiet" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${iconSvg("external-link")}<span>Open</span></a>
         </div>
         <details class="manage-box">
           <summary>Manage site</summary>
@@ -492,14 +504,26 @@ function previewDialog() {
 
 function iconSvg(name) {
   const icons = {
+    archive: `<path d="M10 12h4"/><path d="M10 8h4"/><path d="M4 4v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4"/><path d="M2 2h20v4H2z"/>`,
+    "arrow-right": `<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>`,
+    "circle-alert": `<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>`,
+    "circle-check": `<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>`,
+    clock: `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
+    copy: `<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>`,
+    eye: `<path d="M2.06 12.35a1 1 0 0 1 0-.7C3.75 7.6 7.6 5 12 5c4.4 0 8.25 2.6 9.94 6.65a1 1 0 0 1 0 .7C20.25 16.4 16.4 19 12 19c-4.4 0-8.25-2.6-9.94-6.65"/><circle cx="12" cy="12" r="3"/>`,
     "external-link": `<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>`,
+    folder: `<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>`,
     home: `<path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>`,
+    key: `<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>`,
+    "log-out": `<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>`,
     monitor: `<rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/>`,
     panels: `<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/>`,
     settings: `<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>`,
     smartphone: `<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>`,
     tablet: `<rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><line x1="12" x2="12.01" y1="18" y2="18"/>`,
+    "triangle-alert": `<path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>`,
     upload: `<path d="M12 3v12"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14a2 2 0 0 0 2-2v-4"/><path d="M3 15v4a2 2 0 0 0 2 2"/>`,
+    users: `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
     x: `<path d="M18 6 6 18"/><path d="m6 6 12 12"/>`
   };
 
