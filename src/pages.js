@@ -6,7 +6,7 @@ function loginPage({ error = "" } = {}) {
       <main class="login-shell">
         <form class="login-panel" method="post" action="/login">
           <div class="brand-lockup login-brand">
-            <span class="brand-mark" aria-hidden="true">D</span>
+            <img class="brand-logo" src="/assets/logo.svg" alt="" width="36" height="36">
             <span>Demo Deploy</span>
           </div>
           <div class="login-heading">
@@ -289,7 +289,7 @@ function appPage({
       <div class="app-shell">
         <aside class="sidebar">
           <a class="brand-lockup" href="/" aria-label="Demo Deploy overview">
-            <span class="brand-mark" aria-hidden="true">D</span>
+            <img class="brand-logo" src="/assets/logo.svg" alt="" width="36" height="36">
             <span>Demo Deploy</span>
           </a>
 
@@ -556,6 +556,7 @@ function layout({ title, body, bodyClass = "", script = false }) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>${escapeHtml(title)}</title>
+  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/dashboard.css">
   ${script ? `<script src="/assets/dashboard.js" defer></script>` : ""}
 </head>
