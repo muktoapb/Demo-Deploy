@@ -997,6 +997,14 @@ input::placeholder {
   gap: .75rem;
 }
 
+.manage-upload-grid {
+  padding: .8rem;
+  border: 1px dashed #a8b8b1;
+  border-radius: 8px;
+  background: #fbfdfc;
+  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
 .manage-access-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1475,6 +1483,50 @@ input::placeholder {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: .9rem;
+  padding: .9rem;
+  border: 1px dashed #a8b8b1;
+  border-radius: 8px;
+  background: #fbfdfc;
+  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.upload-grid.is-dragging,
+.manage-upload-grid.is-dragging {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 3px rgba(15, 122, 95, .12);
+}
+
+.upload-grid.has-drop,
+.manage-upload-grid.has-drop {
+  border-color: var(--accent);
+}
+
+.drop-hint {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.drop-hint .icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--accent-strong);
+}
+
+.has-drop .drop-hint {
+  color: var(--accent-strong);
+}
+
+.drop-hint.is-error {
+  color: var(--danger);
 }
 
 .file-choice {
@@ -1483,7 +1535,7 @@ input::placeholder {
   gap: .25rem;
   padding: 1.15rem;
   overflow: hidden;
-  border: 1px dashed #a8b8b1;
+  border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-subtle);
   cursor: pointer;

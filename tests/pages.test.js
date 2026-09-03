@@ -60,6 +60,8 @@ test("renders grouped site controls safely on the sites page", () => {
   assert.match(html, /Site settings/);
   assert.match(html, /Single-page app fallback/);
   assert.match(html, /Replace deployment/);
+  assert.match(html, /data-upload-dropzone/);
+  assert.match(html, /Drag a ZIP file or website folder here/);
   assert.match(html, /Choose one \.zip file/);
   assert.match(html, /Select a folder containing index\.html/);
   assert.match(html, /Site is live/);
@@ -81,6 +83,9 @@ test("renders deployment controls only on the new deployment page", () => {
   assert.match(html, /href="\/sites\/new" aria-current="page"/);
   assert.match(html, /action="\/sites" enctype="multipart\/form-data"/);
   assert.match(html, /Choose a folder with index.html/);
+  assert.match(html, /data-upload-form/);
+  assert.match(html, /data-upload-dropzone/);
+  assert.match(html, /Drag a ZIP file or website folder here/);
   assert.match(html, /Password protect this site/);
   assert.match(html, /name="sitePassword" type="password"/);
   assert.match(html, /data-has-password="false"/);

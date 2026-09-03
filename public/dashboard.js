@@ -171,38 +171,177 @@ titleInput?.addEventListener("input", () => {
     .slice(0, 63);
 });
 
-const uploadInputs = [...document.querySelectorAll(".file-choice input[type=file]")];
+const uploadInputs = [...document.querySelectorAll("[data-upload-form] input[type=file]")];
 const emptyUploadLabels = new Map(uploadInputs.map((input) => [
   input,
-  input.closest(".file-choice").querySelector(".file-choice-value").textContent
+  input.closest(".file-choice")?.querySelector(".file-choice-value")?.textContent
 ]));
+const droppedUploads = new WeakMap();
 
 uploadInputs.forEach((input) => {
   input.addEventListener("change", () => {
-    const choice = input.closest(".file-choice");
-    const value = choice.querySelector(".file-choice-value");
+    const form = input.closest("form");
+    const choice = input.closest(".file-choice, .compact-file");
+    const value = choice?.querySelector(".file-choice-value");
     if (!input.files.length) return;
 
-    uploadInputs.forEach((other) => {
-      if (other === input) return;
-      other.value = "";
-      other.closest(".file-choice").classList.remove("has-file");
-      other.closest(".file-choice").querySelector(".file-choice-value").textContent =
-        emptyUploadLabels.get(other);
-    });
-
-    choice.classList.add("has-file");
-    value.textContent = input.files.length === 1
+    clearUploadInputs(form, input);
+    droppedUploads.delete(form);
+    updateDropStatus(form, input.files.length === 1
       ? input.files[0].name
-      : `${input.files.length} files selected`;
+      : `${input.files.length} files selected`);
+
+    choice?.classList.add("has-file");
+    if (value) {
+      value.textContent = input.files.length === 1
+        ? input.files[0].name
+        : `${input.files.length} files selected`;
+    }
   });
 });
 
-document.querySelectorAll("[data-deploy-form]").forEach((form) => {
-  form.addEventListener("submit", () => {
-    const button = form.querySelector("[data-deploy-button]");
+document.querySelectorAll("[data-upload-dropzone]").forEach((dropzone) => {
+  const form = dropzone.closest("form");
+  let dragDepth = 0;
+
+  dropzone.addEventListener("dragenter", (event) => {
+    if (!hasDraggedFiles(event)) return;
+    event.preventDefault();
+    dragDepth += 1;
+    dropzone.classList.add("is-dragging");
+  });
+
+  dropzone.addEventListener("dragover", (event) => {
+    if (!hasDraggedFiles(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  });
+
+  dropzone.addEventListener("dragleave", () => {
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) dropzone.classList.remove("is-dragging");
+  });
+
+  dropzone.addEventListener("drop", async (event) => {
+    if (!hasDraggedFiles(event)) return;
+    event.preventDefault();
+    dragDepth = 0;
+    dropzone.classList.remove("is-dragging");
+
+    try {
+      const files = await filesFromDrop(event.dataTransfer);
+      if (!files.length) throw new Error("No files were found in that selection.");
+
+      const isZip = files.length === 1 && files[0].file.name.toLowerCase().endsWith(".zip");
+      clearUploadInputs(form);
+      droppedUploads.set(form, { type: isZip ? "archive" : "files", files });
+      dropzone.classList.add("has-drop");
+      updateDropStatus(form, isZip
+        ? `${files[0].file.name} ready to upload`
+        : `${files.length} files ready to upload`);
+    } catch (error) {
+      droppedUploads.delete(form);
+      dropzone.classList.remove("has-drop");
+      updateDropStatus(form, error.message || "This folder could not be read.", true);
+    }
+  });
+});
+
+function clearUploadInputs(form, selectedInput) {
+  uploadInputs.forEach((input) => {
+    if (!form || input.closest("form") !== form || input === selectedInput) return;
+    input.value = "";
+    const choice = input.closest(".file-choice, .compact-file");
+    choice?.classList.remove("has-file");
+    const value = choice?.querySelector(".file-choice-value");
+    if (value) value.textContent = emptyUploadLabels.get(input);
+  });
+  form?.querySelector("[data-upload-dropzone]")?.classList.remove("has-drop");
+}
+
+function updateDropStatus(form, message, isError = false) {
+  const status = form?.querySelector("[data-drop-status]");
+  if (!status) return;
+  status.querySelector("span").textContent = message;
+  status.classList.toggle("is-error", isError);
+}
+
+function hasDraggedFiles(event) {
+  return [...(event.dataTransfer?.types || [])].includes("Files");
+}
+
+async function filesFromDrop(dataTransfer) {
+  const items = [...(dataTransfer.items || [])].filter((item) => item.kind === "file");
+  const entries = items
+    .map((item) => typeof item.webkitGetAsEntry === "function" ? item.webkitGetAsEntry() : null)
+    .filter(Boolean);
+
+  if (entries.length) {
+    const nested = await Promise.all(entries.map((entry) => filesFromEntry(entry, "")));
+    return nested.flat();
+  }
+
+  return [...(dataTransfer.files || [])].map((file) => ({ file, path: file.name }));
+}
+
+async function filesFromEntry(entry, parentPath) {
+  if (entry.isFile) {
+    const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+    return [{ file, path: `${parentPath}${file.name}` }];
+  }
+
+  if (!entry.isDirectory) return [];
+  const children = await readDirectoryEntries(entry.createReader());
+  const nested = await Promise.all(children.map((child) =>
+    filesFromEntry(child, `${parentPath}${entry.name}/`)
+  ));
+  return nested.flat();
+}
+
+async function readDirectoryEntries(reader) {
+  const entries = [];
+  while (true) {
+    const batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+    if (!batch.length) return entries;
+    entries.push(...batch);
+  }
+}
+
+document.querySelectorAll("[data-upload-form]").forEach((form) => {
+  form.addEventListener("submit", async (event) => {
+    const dropped = droppedUploads.get(form);
+    const button = form.querySelector("[data-upload-button]");
+    const originalButtonHtml = button?.innerHTML;
     form.setAttribute("aria-busy", "true");
-    button.disabled = true;
-    button.textContent = "Deploying...";
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Deploying...";
+    }
+
+    if (!dropped) return;
+    event.preventDefault();
+
+    const body = new FormData(form);
+    body.delete("archive");
+    body.delete("files");
+    dropped.files.forEach(({ file, path }) => {
+      body.append(dropped.type, file, dropped.type === "archive" ? file.name : path);
+    });
+
+    try {
+      const response = await fetch(form.action, {
+        method: form.method || "POST",
+        body,
+        credentials: "same-origin"
+      });
+      window.location.assign(response.url || form.action);
+    } catch {
+      form.removeAttribute("aria-busy");
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = originalButtonHtml;
+      }
+      updateDropStatus(form, "Upload failed. Check your connection and try again.", true);
+    }
   });
 });

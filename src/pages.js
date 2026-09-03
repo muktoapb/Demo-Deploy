@@ -159,7 +159,7 @@ function newSitePage(options) {
             <p class="section-description">The upload must contain an index.html file.</p>
           </div>
         </div>
-        <form class="form-surface upload-form" method="post" action="/sites" enctype="multipart/form-data" data-deploy-form>
+        <form class="form-surface upload-form" method="post" action="/sites" enctype="multipart/form-data" data-upload-form>
           ${csrfField(csrfToken)}
           <div class="form-grid form-grid-three">
             <label>
@@ -196,7 +196,8 @@ function newSitePage(options) {
               </label>
             </div>
           </fieldset>
-          <div class="upload-grid">
+          <div class="upload-grid" data-upload-dropzone>
+            <p class="drop-hint" data-drop-status role="status" aria-live="polite">${iconSvg("upload")}<span>Drag a ZIP file or website folder here</span></p>
             <label class="file-choice">
               <span class="file-choice-icon" aria-hidden="true">${iconSvg("archive")}</span>
               <span class="file-choice-title">ZIP archive</span>
@@ -216,7 +217,7 @@ function newSitePage(options) {
               <input name="spaFallback" type="checkbox" value="1" checked>
               <span>Use index.html for app routes</span>
             </label>
-            <button class="button button-primary" type="submit" data-deploy-button>${iconSvg("upload")}<span>Deploy site</span></button>
+            <button class="button button-primary" type="submit" data-upload-button>${iconSvg("upload")}<span>Deploy site</span></button>
           </div>
         </form>
       </section>`
@@ -542,9 +543,10 @@ function manageDialog(site, title, url, csrfToken) {
               <p>Publish a new ZIP archive or website folder to this address.</p>
             </div>
           </div>
-          <form class="manage-form" method="post" action="/sites/${encodeURIComponent(site.slug)}/redeploy" enctype="multipart/form-data">
+          <form class="manage-form" method="post" action="/sites/${encodeURIComponent(site.slug)}/redeploy" enctype="multipart/form-data" data-upload-form>
             ${csrfField(csrfToken)}
-            <div class="manage-upload-grid">
+            <div class="manage-upload-grid" data-upload-dropzone>
+              <p class="drop-hint" data-drop-status role="status" aria-live="polite">${iconSvg("upload")}<span>Drag a ZIP file or website folder here</span></p>
               <label class="compact-file">
                 <span class="compact-file-heading">
                   ${iconSvg("archive")}
@@ -562,7 +564,7 @@ function manageDialog(site, title, url, csrfToken) {
             </div>
             <input name="spaFallback" type="hidden" value="${site.spaFallback ? "1" : "0"}">
             <div class="manage-form-actions">
-              <button class="button button-secondary" type="submit">${iconSvg("upload")}<span>Redeploy site</span></button>
+              <button class="button button-secondary" type="submit" data-upload-button>${iconSvg("upload")}<span>Redeploy site</span></button>
             </div>
           </form>
         </section>

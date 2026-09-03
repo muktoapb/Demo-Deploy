@@ -9,7 +9,7 @@ It is designed for freelancers, agencies, and small teams that regularly share H
 ## What it does
 
 - Publishes static files to automatic subdomains
-- Accepts ZIP archives and browser folder uploads
+- Accepts ZIP archives and folders through browsing or drag and drop
 - Provides sandboxed thumbnails and full-page previews
 - Organizes deployments by client or project group
 - Searches, filters, edits, redeploys, and deletes sites
