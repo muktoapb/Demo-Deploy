@@ -1,3 +1,13 @@
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const assetVersion = crypto.createHash("sha256")
+  .update(fs.readFileSync(path.join(__dirname, "../public/dashboard.css")))
+  .update(fs.readFileSync(path.join(__dirname, "../public/dashboard.js")))
+  .digest("hex")
+  .slice(0, 12);
+
 function loginPage({ error = "" } = {}) {
   return layout({
     title: "Sign in | Demo Deploy",
@@ -679,8 +689,8 @@ function layout({ title, body, bodyClass = "", script = false }) {
   <meta name="robots" content="noindex, nofollow">
   <title>${escapeHtml(title)}</title>
   <link rel="icon" href="/assets/logo-generated.png" type="image/png">
-  <link rel="stylesheet" href="/assets/dashboard.css">
-  ${script ? `<script src="/assets/dashboard.js" defer></script>` : ""}
+  <link rel="stylesheet" href="/assets/dashboard.css?v=${assetVersion}">
+  ${script ? `<script src="/assets/dashboard.js?v=${assetVersion}" defer></script>` : ""}
 </head>
 <body class="${escapeHtml(bodyClass)}">
   ${body}

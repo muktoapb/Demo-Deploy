@@ -86,6 +86,8 @@ test("renders deployment controls only on the new deployment page", () => {
   assert.match(html, /data-upload-form/);
   assert.match(html, /data-upload-dropzone/);
   assert.match(html, /Drag a ZIP file or website folder here/);
+  assert.match(html, /dashboard\.css\?v=[a-f0-9]{12}/);
+  assert.match(html, /dashboard\.js\?v=[a-f0-9]{12}/);
   assert.match(html, /Password protect this site/);
   assert.match(html, /name="sitePassword" type="password"/);
   assert.match(html, /data-has-password="false"/);
