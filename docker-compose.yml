@@ -1,8 +1,6 @@
 services:
   demo-deploy:
     build: .
-    ports:
-      - "3000:3000"
     environment:
       BASE_DOMAIN: ${BASE_DOMAIN:-localhost}
       PUBLIC_PROTOCOL: ${PUBLIC_PROTOCOL:-http}
