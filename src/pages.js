@@ -448,7 +448,7 @@ function siteCard(site, url) {
   return `
     <article class="site-card" data-site-card data-title="${escapeHtml(title.toLowerCase())}" data-slug="${escapeHtml(site.slug)}" data-group="${escapeHtml(groupKey)}">
       <div class="preview-canvas">
-        <iframe src="${escapeHtml(url)}" title="${escapeHtml(title)} thumbnail" loading="lazy" sandbox="allow-scripts" tabindex="-1"></iframe>
+        <iframe src="${escapeHtml(previewUrl(url))}" title="${escapeHtml(title)} thumbnail" loading="lazy" sandbox="allow-scripts" tabindex="-1"></iframe>
       </div>
       <div class="site-card-body">
         <div class="site-title-row">
@@ -466,7 +466,7 @@ function siteCard(site, url) {
           <p class="site-views">${iconSvg("eye")}<span>${formatInteger(views)} ${views === 1 ? "view" : "views"}</span></p>
         </div>
         <div class="site-actions">
-          <button class="button button-secondary site-preview-button" type="button" data-preview-url="${escapeHtml(url)}" data-preview-name="${escapeHtml(title)}">${iconSvg("eye")}<span>Preview</span></button>
+          <button class="button button-secondary site-preview-button" type="button" data-preview-url="${escapeHtml(previewUrl(url))}" data-preview-open-url="${escapeHtml(url)}" data-preview-name="${escapeHtml(title)}">${iconSvg("eye")}<span>Preview</span></button>
           <div class="site-action-icons">
             <button class="icon-button" type="button" data-copy-url="${escapeHtml(url)}" aria-label="Copy ${escapeHtml(title)} URL" title="Copy URL">${iconSvg("copy")}<span class="sr-only">Copy URL</span></button>
             <a class="icon-button" href="${escapeHtml(url)}" target="_blank" rel="noreferrer" aria-label="Open ${escapeHtml(title)} in a new tab" title="Open site">${iconSvg("external-link")}</a>
@@ -496,10 +496,12 @@ function manageDialog(site, title, url, csrfToken) {
         <div class="manage-bar-actions">
           <span class="status${paused ? " status-paused" : ""}"><i></i>${paused ? "Paused" : "Live"}</span>
           <a class="icon-button" href="${escapeHtml(url)}" target="_blank" rel="noreferrer" aria-label="Open ${escapeHtml(title)} in a new tab" title="Open site">${iconSvg("external-link")}</a>
+          <a class="icon-button" href="/sites/${encodeURIComponent(site.slug)}/download" aria-label="Download ${escapeHtml(title)} as a ZIP" title="Download ZIP">${iconSvg("download")}</a>
           <button class="icon-button" type="button" data-manage-close aria-label="Close manage dialog" title="Close manage dialog">${iconSvg("x")}</button>
         </div>
       </div>
       <div class="manage-content">
+        ${analyticsSection(site)}
         <section class="manage-section">
           <div class="manage-section-heading">
             <div>
@@ -593,6 +595,60 @@ function manageDialog(site, title, url, csrfToken) {
     </dialog>`;
 }
 
+function analyticsSection(site) {
+  const daily = recentDailyViews(site.views?.daily);
+  return `
+    <section class="manage-section analytics-section">
+      <div class="manage-section-heading">
+        <div>
+          <h3>Analytics</h3>
+          <p>Recent real visits, excluding dashboard previews.</p>
+        </div>
+      </div>
+      <div class="analytics-metrics" aria-label="Site analytics summary">
+        ${analyticsMetric("Unique visitors", siteViewCount(site))}
+        ${analyticsMetric("Total visits", siteVisitCount(site))}
+        ${analyticsMetric("Last visit", formatRelativeDate(site.views?.lastVisitedAt))}
+      </div>
+      ${daily.length ? `
+        <div class="analytics-chart" aria-label="Visits by day">
+          ${daily.map((item) => `
+            <span style="--bar-height: ${analyticsBarHeight(item.count, daily)}%" title="${escapeHtml(formatShortDate(item.date))}: ${formatInteger(item.count)} ${item.count === 1 ? "visit" : "visits"}">
+              <i></i>
+              <small>${escapeHtml(dayLabel(item.date))}</small>
+            </span>`).join("")}
+        </div>` : `<p class="analytics-empty">No visit activity yet.</p>`}
+      <div class="analytics-lists">
+        ${analyticsList("Top pages", site.views?.paths)}
+        ${analyticsList("Referrers", site.views?.referrers)}
+      </div>
+    </section>`;
+}
+
+function analyticsMetric(label, value) {
+  return `
+    <div class="analytics-metric">
+      <span>${escapeHtml(label)}</span>
+      <strong>${typeof value === "number" ? formatInteger(value) : escapeHtml(value)}</strong>
+    </div>`;
+}
+
+function analyticsList(title, items) {
+  const metrics = Array.isArray(items) ? items.slice(0, 5) : [];
+  return `
+    <div class="analytics-list">
+      <h4>${escapeHtml(title)}</h4>
+      ${metrics.length ? `
+        <ol>
+          ${metrics.map((item) => `
+            <li>
+              <span>${escapeHtml(item.name)}</span>
+              <strong>${formatInteger(item.count)}</strong>
+            </li>`).join("")}
+        </ol>` : `<p>No data yet.</p>`}
+    </div>`;
+}
+
 function manageDialogId(slug) {
   return `manage-${slug}`;
 }
@@ -641,6 +697,7 @@ function iconSvg(name) {
     "circle-check": `<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>`,
     clock: `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
     copy: `<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>`,
+    download: `<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>`,
     eye: `<path d="M2.06 12.35a1 1 0 0 1 0-.7C3.75 7.6 7.6 5 12 5c4.4 0 8.25 2.6 9.94 6.65a1 1 0 0 1 0 .7C20.25 16.4 16.4 19 12 19c-4.4 0-8.25-2.6-9.94-6.65"/><circle cx="12" cy="12" r="3"/>`,
     "external-link": `<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>`,
     folder: `<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>`,
@@ -717,12 +774,52 @@ function siteViewCount(site) {
   return 0;
 }
 
+function siteVisitCount(site) {
+  if (Number.isInteger(site.views?.total)) return site.views.total;
+  return siteViewCount(site);
+}
+
 function formatInteger(value) {
   return new Intl.NumberFormat("en").format(value);
 }
 
 function urlLabel(url) {
   return String(url).replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
+function previewUrl(url) {
+  const separator = String(url).includes("?") ? "&" : "?";
+  return `${url}${separator}__demo_deploy_preview=1`;
+}
+
+function recentDailyViews(daily) {
+  return (Array.isArray(daily) ? daily : [])
+    .filter((item) => item.date && Number.isInteger(item.count))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-7);
+}
+
+function analyticsBarHeight(count, daily) {
+  const max = Math.max(...daily.map((item) => item.count), 1);
+  return Math.max(14, Math.round((count / max) * 100));
+}
+
+function formatRelativeDate(value) {
+  if (!value) return "Never";
+  return formatDate(value);
+}
+
+function formatShortDate(value) {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric"
+  }).format(new Date(value));
+}
+
+function dayLabel(value) {
+  return new Intl.DateTimeFormat("en", {
+    weekday: "short"
+  }).format(new Date(value));
 }
 
 function formatDate(value) {

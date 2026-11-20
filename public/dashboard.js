@@ -8,10 +8,11 @@ const previewSizeButtons = [...document.querySelectorAll("[data-preview-size]")]
 document.querySelectorAll("[data-preview-url]").forEach((button) => {
   button.addEventListener("click", () => {
     const url = button.dataset.previewUrl;
+    const openUrl = button.dataset.previewOpenUrl || url;
     previewFrame.src = url;
     previewTitle.textContent = button.dataset.previewName || "Site preview";
-    previewAddress.textContent = url;
-    previewOpen.href = url;
+    previewAddress.textContent = openUrl;
+    previewOpen.href = openUrl;
     previewDialog.showModal();
   });
 });

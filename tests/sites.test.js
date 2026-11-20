@@ -11,6 +11,7 @@ const { serveSite } = require("../src/sites");
 const {
   findSite,
   siteCurrentDir,
+  siteVisitCount,
   siteViewCount,
   updateSiteMetadata,
   upsertSite
@@ -25,12 +26,44 @@ test("serving a site records only one view for each IP", async () => {
   });
   await fs.mkdir(siteCurrentDir("served-demo"), { recursive: true });
   await fs.writeFile(path.join(siteCurrentDir("served-demo"), "index.html"), "<h1>Hello</h1>");
+  await fs.writeFile(path.join(siteCurrentDir("served-demo"), "style.css"), "body{}");
 
   await serveSite(request("198.51.100.20"), response(), "served-demo");
   await serveSite(request("198.51.100.20"), response(), "served-demo");
   await serveSite(request("198.51.100.21"), response(), "served-demo");
+  await serveSite(request("198.51.100.21", {
+    path: "/style.css",
+    url: "/style.css",
+    originalUrl: "/style.css"
+  }), response(), "served-demo");
 
-  assert.equal(siteViewCount(await findSite("served-demo")), 2);
+  const site = await findSite("served-demo");
+  assert.equal(siteViewCount(site), 2);
+  assert.equal(siteVisitCount(site), 3);
+  assert.deepEqual(site.views.paths, [{ name: "/", count: 3 }]);
+});
+
+test("dashboard previews do not record site views", async () => {
+  await createSite("preview-demo");
+  await fs.writeFile(path.join(siteCurrentDir("preview-demo"), "style.css"), "body{}");
+
+  await serveSite(request("198.51.100.50", {
+    url: "/?__demo_deploy_preview=1",
+    originalUrl: "/?__demo_deploy_preview=1"
+  }), response(), "preview-demo");
+  await serveSite(request("198.51.100.50", {
+    path: "/style.css",
+    url: "/style.css",
+    originalUrl: "/style.css",
+    headers: {
+      referer: "http://preview-demo.localhost:3000/?__demo_deploy_preview=1"
+    }
+  }), response(), "preview-demo");
+
+  assert.equal(siteViewCount(await findSite("preview-demo")), 0);
+
+  await serveSite(request("198.51.100.50"), response(), "preview-demo");
+  assert.equal(siteViewCount(await findSite("preview-demo")), 1);
 });
 
 test("paused sites do not serve uploaded files", async () => {
@@ -101,14 +134,18 @@ function siteSettings(overrides = {}) {
 }
 
 function request(ip, overrides = {}) {
-  return {
+  const req = {
     method: "GET",
     path: "/",
+    url: "/",
+    originalUrl: "/",
     ip,
     headers: {},
     body: {},
     ...overrides
   };
+  req.get = (name) => req.headers[String(name).toLowerCase()];
+  return req;
 }
 
 function response() {

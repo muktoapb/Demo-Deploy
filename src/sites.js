@@ -49,13 +49,34 @@ async function serveSite(req, res, slug) {
     return;
   }
 
-  if (req.method === "GET") {
-    await recordSiteView(slug, req.ip);
+  if (shouldRecordSiteView(req, filePath)) {
+    await recordSiteView(slug, req.ip, {
+      path: requestedPath,
+      referrer: req.get?.("referer") || req.headers?.referer || ""
+    });
   }
 
   res.setHeader("Content-Type", mime.lookup(filePath) || "application/octet-stream");
   res.setHeader("Cache-Control", cacheHeader(filePath));
   res.sendFile(filePath);
+}
+
+function shouldRecordSiteView(req, filePath) {
+  return req.method === "GET" && isHtmlFile(filePath) && !isPreviewRequest(req);
+}
+
+function isPreviewRequest(req) {
+  const url = String(req.originalUrl || req.url || req.path || "");
+  const referrer = String(req.get?.("referer") || req.headers?.referer || "");
+  return hasPreviewMarker(url) || hasPreviewMarker(referrer);
+}
+
+function hasPreviewMarker(value) {
+  return /[?&]__demo_deploy_preview=1(?:&|$)/.test(value);
+}
+
+function isHtmlFile(filePath) {
+  return path.extname(filePath).toLowerCase() === ".html";
 }
 
 async function requestSiteAccess(req, res, site) {

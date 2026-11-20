@@ -7,12 +7,14 @@ const assert = require("node:assert/strict");
 
 process.env.DATA_DIR = fsSync.mkdtempSync(path.join(os.tmpdir(), "demo-deploy-data-"));
 
-const { cleanUploadPath, deploySite, validateSlug } = require("../src/deploy");
+const yauzl = require("yauzl");
+const { cleanUploadPath, createSiteArchive, deploySite, validateSlug } = require("../src/deploy");
 const { verifyPassword } = require("../src/auth");
 const {
   findSite,
   recordSiteView,
   siteCurrentDir,
+  siteVisitCount,
   siteViewCount,
   updateSiteMetadata,
   upsertSite
@@ -141,13 +143,48 @@ test("records one unique view per site IP", async () => {
   });
 
   assert.equal(await recordSiteView("view-demo", "203.0.113.10"), true);
-  assert.equal(await recordSiteView("view-demo", "203.0.113.10"), false);
-  assert.equal(await recordSiteView("view-demo", "203.0.113.11"), true);
+  assert.equal(await recordSiteView("view-demo", "203.0.113.10", {
+    path: "/pricing",
+    referrer: "https://example.net/source"
+  }), false);
+  assert.equal(await recordSiteView("view-demo", "203.0.113.11", {
+    path: "/pricing",
+    referrer: ""
+  }), true);
 
   const site = await findSite("view-demo");
   assert.equal(siteViewCount(site), 2);
+  assert.equal(siteVisitCount(site), 3);
   assert.equal(site.views.visitorHashes.length, 2);
   assert.equal(site.views.visitorHashes.includes("203.0.113.10"), false);
+  assert.deepEqual(site.views.paths, [{ name: "/pricing", count: 2 }, { name: "/", count: 1 }]);
+  assert.deepEqual(site.views.referrers, [{ name: "Direct", count: 2 }, { name: "example.net", count: 1 }]);
+  assert.equal(site.views.daily.length, 1);
+});
+
+test("creates a downloadable ZIP archive of an existing site", async () => {
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "demo-deploy-zip-"));
+  const indexPath = path.join(tmp, "index-file");
+  const stylePath = path.join(tmp, "style-file");
+  await fs.writeFile(indexPath, "<h1>Archive me</h1>");
+  await fs.writeFile(stylePath, "body{color:red}");
+
+  await deploySite({
+    slug: "zip-demo",
+    title: "Zip Demo",
+    files: [
+      { fieldname: "files", originalname: "index.html", path: indexPath, size: 19 },
+      { fieldname: "files", originalname: "assets/style.css", path: stylePath, size: 15 }
+    ]
+  });
+
+  const entries = await readZipEntries(await streamToBuffer(await createSiteArchive("zip-demo")));
+
+  assert.deepEqual(Object.keys(entries).sort(), ["assets/style.css", "index.html"]);
+  assert.equal(entries["index.html"], "<h1>Archive me</h1>");
+  assert.equal(entries["assets/style.css"], "body{color:red}");
+
+  await assert.rejects(createSiteArchive("missing-site"), /no files to download/);
 });
 
 test("rejects invalid persisted site metadata", async () => {
@@ -161,3 +198,32 @@ test("rejects invalid persisted site metadata", async () => {
     /120 characters/
   );
 });
+
+function streamToBuffer(stream) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    stream.on("data", (chunk) => chunks.push(chunk));
+    stream.once("end", () => resolve(Buffer.concat(chunks)));
+    stream.once("error", reject);
+  });
+}
+
+function readZipEntries(buffer) {
+  return new Promise((resolve, reject) => {
+    yauzl.fromBuffer(buffer, { lazyEntries: true }, (error, zipFile) => {
+      if (error) return reject(error);
+
+      const entries = {};
+      zipFile.readEntry();
+      zipFile.on("entry", (entry) => {
+        zipFile.openReadStream(entry, async (streamError, readStream) => {
+          if (streamError) return reject(streamError);
+          entries[entry.fileName] = (await streamToBuffer(readStream)).toString("utf8");
+          zipFile.readEntry();
+        });
+      });
+      zipFile.once("end", () => resolve(entries));
+      zipFile.once("error", reject);
+    });
+  });
+}

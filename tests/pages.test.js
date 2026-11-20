@@ -15,7 +15,12 @@ const context = {
     spaFallback: true,
     views: {
       count: 1,
-      visitorHashes: ["visitor-hash"]
+      total: 3,
+      visitorHashes: ["visitor-hash"],
+      lastVisitedAt: "2026-01-02T00:00:00.000Z",
+      daily: [{ date: "2026-01-02", count: 3 }],
+      paths: [{ name: "/", count: 2 }, { name: "/pricing", count: 1 }],
+      referrers: [{ name: "Direct", count: 2 }, { name: "example.net", count: 1 }]
     },
     access: {
       paused: true,
@@ -52,11 +57,21 @@ test("renders grouped site controls safely on the sites page", () => {
   assert.match(html, /data-preview-size="desktop"/);
   assert.match(html, /data-preview-size="tablet"/);
   assert.match(html, /data-preview-size="mobile"/);
+  assert.match(html, /__demo_deploy_preview=1/);
+  assert.match(html, /data-preview-open-url="https:\/\/acme-demo\.example\.com"/);
   assert.match(html, /sandbox="allow-scripts allow-forms allow-same-origin" data-preview-frame/);
   assert.match(html, /class="nav-icon"/);
   assert.doesNotMatch(html, /<span>Preview site<\/span>/);
   assert.match(html, /data-manage-open/);
   assert.match(html, /data-manage-dialog/);
+  assert.match(html, /Analytics/);
+  assert.match(html, /Unique visitors/);
+  assert.match(html, /Total visits/);
+  assert.match(html, />3<\/strong>/);
+  assert.match(html, /Top pages/);
+  assert.match(html, /\/pricing/);
+  assert.match(html, /Referrers/);
+  assert.match(html, /example\.net/);
   assert.match(html, /Site settings/);
   assert.match(html, /Single-page app fallback/);
   assert.match(html, /Replace deployment/);

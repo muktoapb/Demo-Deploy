@@ -3,6 +3,7 @@ const fsSync = require("node:fs");
 const path = require("node:path");
 const { pipeline } = require("node:stream/promises");
 const yauzl = require("yauzl");
+const yazl = require("yazl");
 const { config } = require("./config");
 const { findSite, siteCurrentDir, upsertSite } = require("./storage");
 
@@ -187,6 +188,51 @@ async function extractZip(zipPath, destinationDir) {
   }
 }
 
+async function createSiteArchive(slug) {
+  const currentDir = siteCurrentDir(slug);
+  const relativePaths = await listArchiveFiles(currentDir);
+
+  if (relativePaths.length === 0) {
+    throw new Error("This site has no files to download.");
+  }
+
+  const zip = new yazl.ZipFile();
+  for (const relativePath of relativePaths) {
+    zip.addFile(path.join(currentDir, relativePath), relativePath);
+  }
+  zip.end();
+
+  return zip.outputStream;
+}
+
+async function listArchiveFiles(directory) {
+  const collected = [];
+
+  async function walk(dir, prefix) {
+    let entries;
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch (error) {
+      if (error.code === "ENOENT") return;
+      throw error;
+    }
+
+    for (const entry of entries) {
+      if (SKIPPED_NAMES.has(entry.name) || SKIPPED_PARTS.has(entry.name)) continue;
+
+      const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        await walk(path.join(dir, entry.name), relativePath);
+      } else if (entry.isFile()) {
+        collected.push(relativePath);
+      }
+    }
+  }
+
+  await walk(directory, "");
+  return collected.sort();
+}
+
 function openZip(zipPath) {
   return new Promise((resolve, reject) => {
     yauzl.open(zipPath, { lazyEntries: true, validateEntrySizes: true }, (error, zipFile) => {
@@ -249,6 +295,7 @@ async function fileExists(filePath) {
 
 module.exports = {
   cleanUploadPath,
+  createSiteArchive,
   deploySite,
   makeSlug,
   validateSlug

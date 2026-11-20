@@ -985,6 +985,135 @@ input::placeholder {
   font-size: .76rem;
 }
 
+.analytics-section {
+  background: linear-gradient(180deg, #fbfdfc 0%, #fff 100%);
+}
+
+.analytics-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+.analytics-metric {
+  min-width: 0;
+  display: grid;
+  gap: .18rem;
+  padding: .85rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.analytics-metric span {
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 720;
+}
+
+.analytics-metric strong {
+  overflow: hidden;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-chart {
+  min-height: 7.4rem;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: .45rem;
+  padding: .8rem .8rem .65rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.analytics-chart span {
+  min-width: 0;
+  height: 5.85rem;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: .35rem;
+}
+
+.analytics-chart i {
+  width: 100%;
+  height: var(--bar-height);
+  min-height: .55rem;
+  border-radius: 5px 5px 3px 3px;
+  background: var(--accent);
+}
+
+.analytics-chart small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .64rem;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-lists {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.analytics-list {
+  min-width: 0;
+  padding: .85rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+}
+
+.analytics-list h4 {
+  margin: 0 0 .6rem;
+  font-size: .74rem;
+}
+
+.analytics-list ol {
+  display: grid;
+  gap: .4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.analytics-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .7rem;
+  color: var(--muted);
+  font-size: .72rem;
+}
+
+.analytics-list li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-list li strong {
+  color: var(--text);
+  font-size: .72rem;
+}
+
+.analytics-empty,
+.analytics-list p {
+  margin: 0;
+  padding: .8rem;
+  border: 1px dashed #c9d4cf;
+  border-radius: 7px;
+  color: var(--muted);
+  background: #fff;
+  font-size: .74rem;
+}
+
 .manage-form {
   display: grid;
   gap: .85rem;
@@ -2215,6 +2344,8 @@ input::placeholder {
     padding: 1rem;
   }
 
+  .analytics-metrics,
+  .analytics-lists,
   .manage-field-grid,
   .manage-upload-grid,
   .manage-access-grid,

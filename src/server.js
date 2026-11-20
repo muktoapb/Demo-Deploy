@@ -12,7 +12,7 @@ const {
   setLoginCookie,
   verifyAdminCredentials
 } = require("./auth");
-const { deploySite, makeSlug } = require("./deploy");
+const { createSiteArchive, deploySite, makeSlug } = require("./deploy");
 const {
   dashboardPage,
   loginPage,
@@ -22,6 +22,7 @@ const {
 } = require("./pages");
 const {
   ensureStorage,
+  findSite,
   loadSites,
   removeSite,
   siteUrl,
@@ -140,6 +141,25 @@ app.get("/sites/new", async (req, res, next) => {
 app.get("/settings", async (req, res, next) => {
   try {
     sendAdminPage(res, settingsPage(await adminPageData(req)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/sites/:slug/download", async (req, res, next) => {
+  try {
+    const site = await findSite(req.params.slug);
+    if (!site) {
+      res.status(404).send("Not found");
+      return;
+    }
+
+    const archive = await createSiteArchive(site.slug);
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="${site.slug}.zip"`);
+    res.setHeader("Cache-Control", "no-store");
+    archive.on("error", next);
+    archive.pipe(res);
   } catch (error) {
     next(error);
   }

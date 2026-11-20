@@ -85,7 +85,7 @@ async function updateSiteMetadata(slug, updates) {
   return sites[index];
 }
 
-async function recordSiteView(slug, ipAddress) {
+async function recordSiteView(slug, ipAddress, details = {}) {
   const visitorHash = hashVisitor(ipAddress);
   if (!visitorHash) return false;
 
@@ -97,20 +97,28 @@ async function recordSiteView(slug, ipAddress) {
     ? sites[index].views.visitorHashes
     : [];
   const visitorHashes = new Set(existingHashes);
-  if (visitorHashes.has(visitorHash)) return false;
+  const isUniqueVisitor = !visitorHashes.has(visitorHash);
+  if (isUniqueVisitor) visitorHashes.add(visitorHash);
 
-  visitorHashes.add(visitorHash);
+  const now = new Date();
+  const currentViews = sites[index].views || {};
   sites[index] = {
     ...sites[index],
     views: {
+      ...currentViews,
       count: visitorHashes.size,
       visitorHashes: [...visitorHashes],
-      updatedAt: new Date().toISOString()
+      total: siteVisitCount(sites[index]) + 1,
+      lastVisitedAt: now.toISOString(),
+      daily: incrementDailyViews(currentViews.daily, now),
+      paths: incrementNamedMetric(currentViews.paths, normalizeAnalyticsPath(details.path), 20),
+      referrers: incrementNamedMetric(currentViews.referrers, normalizeReferrer(details.referrer), 20),
+      updatedAt: now.toISOString()
     }
   };
 
   await saveSites(sites);
-  return true;
+  return isUniqueVisitor;
 }
 
 async function removeSite(slug) {
@@ -129,6 +137,11 @@ function siteViewCount(site) {
   return 0;
 }
 
+function siteVisitCount(site) {
+  if (Number.isInteger(site.views?.total)) return site.views.total;
+  return siteViewCount(site);
+}
+
 function siteUrl(slug, req) {
   const host = config.baseDomain === "localhost"
     ? `localhost:${config.port}`
@@ -144,6 +157,59 @@ function hashVisitor(ipAddress) {
     .createHmac("sha256", config.sessionSecret)
     .update(normalized)
     .digest("base64url");
+}
+
+function incrementDailyViews(daily, now) {
+  const date = now.toISOString().slice(0, 10);
+  const nextDaily = Array.isArray(daily) ? daily.map((item) => ({
+    date: String(item.date || ""),
+    count: Number.isInteger(item.count) ? item.count : 0
+  })).filter((item) => item.date) : [];
+  const existing = nextDaily.find((item) => item.date === date);
+
+  if (existing) existing.count += 1;
+  else nextDaily.push({ date, count: 1 });
+
+  return nextDaily
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-30);
+}
+
+function incrementNamedMetric(metrics, name, limit) {
+  const metricName = name || "Unknown";
+  const nextMetrics = Array.isArray(metrics) ? metrics.map((item) => ({
+    name: String(item.name || ""),
+    count: Number.isInteger(item.count) ? item.count : 0
+  })).filter((item) => item.name) : [];
+  const existing = nextMetrics.find((item) => item.name === metricName);
+
+  if (existing) existing.count += 1;
+  else nextMetrics.push({ name: metricName, count: 1 });
+
+  return nextMetrics
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, limit);
+}
+
+function normalizeAnalyticsPath(value) {
+  const pathValue = String(value || "/").split("?")[0].split("#")[0] || "/";
+  return pathValue.startsWith("/") ? pathValue : `/${pathValue}`;
+}
+
+function normalizeReferrer(value) {
+  const referrer = String(value || "").trim();
+  if (!referrer) return "Direct";
+
+  try {
+    const url = new URL(referrer);
+    const baseHost = config.baseDomain === "localhost" ? "localhost" : config.baseDomain;
+    if (url.hostname === baseHost || url.hostname.endsWith(`.${baseHost}`)) {
+      return "Internal";
+    }
+    return url.hostname.replace(/^www\./, "");
+  } catch {
+    return "Unknown";
+  }
 }
 
 function normalizeSiteMetadata(value, slug) {
@@ -187,6 +253,7 @@ module.exports = {
   recordSiteView,
   removeSite,
   siteCurrentDir,
+  siteVisitCount,
   siteViewCount,
   siteUrl,
   updateSiteMetadata,
