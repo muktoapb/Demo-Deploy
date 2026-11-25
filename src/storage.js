@@ -22,9 +22,25 @@ async function loadSites() {
 
 async function saveSites(sites) {
   await fs.mkdir(path.dirname(config.registryPath), { recursive: true });
-  const tmpPath = `${config.registryPath}.tmp`;
-  await fs.writeFile(tmpPath, `${JSON.stringify(sites, null, 2)}\n`);
-  await fs.rename(tmpPath, config.registryPath);
+  // A temp file per save, so two saves never write into the same file.
+  const tmpPath = `${config.registryPath}.${process.pid}.${crypto.randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(tmpPath, `${JSON.stringify(sites, null, 2)}\n`);
+    await fs.rename(tmpPath, config.registryPath);
+  } catch (error) {
+    await fs.rm(tmpPath, { force: true });
+    throw error;
+  }
+}
+
+let registryQueue = Promise.resolve();
+
+// Runs registry read-modify-write steps one at a time, so simultaneous
+// requests (such as visits being counted) cannot overwrite each other.
+function withRegistryLock(task) {
+  const run = registryQueue.then(task, task);
+  registryQueue = run.catch(() => {});
+  return run;
 }
 
 async function findSite(slug) {
@@ -33,6 +49,10 @@ async function findSite(slug) {
 }
 
 async function upsertSite(site) {
+  return withRegistryLock(() => upsertSiteUnlocked(site));
+}
+
+async function upsertSiteUnlocked(site) {
   const sites = await loadSites();
   const index = sites.findIndex((item) => item.slug === site.slug);
   const metadata = normalizeSiteMetadata(site, site.slug);
@@ -70,6 +90,10 @@ async function upsertSite(site) {
 }
 
 async function updateSiteMetadata(slug, updates) {
+  return withRegistryLock(() => updateSiteMetadataUnlocked(slug, updates));
+}
+
+async function updateSiteMetadataUnlocked(slug, updates) {
   const sites = await loadSites();
   const index = sites.findIndex((site) => site.slug === slug);
   if (index === -1) throw new Error("Site not found.");
@@ -89,6 +113,10 @@ async function recordSiteView(slug, ipAddress, details = {}) {
   const visitorHash = hashVisitor(ipAddress);
   if (!visitorHash) return false;
 
+  return withRegistryLock(() => recordSiteViewUnlocked(slug, visitorHash, details));
+}
+
+async function recordSiteViewUnlocked(slug, visitorHash, details) {
   const sites = await loadSites();
   const index = sites.findIndex((site) => site.slug === slug);
   if (index === -1) return false;
@@ -122,8 +150,10 @@ async function recordSiteView(slug, ipAddress, details = {}) {
 }
 
 async function removeSite(slug) {
-  const sites = await loadSites();
-  await saveSites(sites.filter((site) => site.slug !== slug));
+  await withRegistryLock(async () => {
+    const sites = await loadSites();
+    await saveSites(sites.filter((site) => site.slug !== slug));
+  });
   await fs.rm(path.join(config.sitesDir, slug), { recursive: true, force: true });
 }
 

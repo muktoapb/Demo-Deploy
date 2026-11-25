@@ -10,6 +10,8 @@ process.env.DATA_DIR = fsSync.mkdtempSync(path.join(os.tmpdir(), "demo-deploy-si
 const { serveSite } = require("../src/sites");
 const {
   findSite,
+  loadSites,
+  recordSiteView,
   siteCurrentDir,
   siteVisitCount,
   siteViewCount,
@@ -113,6 +115,19 @@ test("password-protected sites unlock with a signed cookie", async () => {
   const served = response();
   await serveSite(request("198.51.100.40", { headers: { cookie } }), served, "protected-demo");
   assert.match(served.filePath, /protected-demo\/current\/index\.html$/);
+});
+
+test("simultaneous visits keep the registry valid and count every visit", async () => {
+  await createSite("busy-demo");
+
+  await Promise.all(Array.from({ length: 25 }, (_, index) =>
+    recordSiteView("busy-demo", `198.51.100.${100 + index}`, { path: "/" })
+  ));
+
+  const sites = await loadSites();
+  const site = sites.find((item) => item.slug === "busy-demo");
+  assert.equal(siteVisitCount(site), 25);
+  assert.equal(siteViewCount(site), 25);
 });
 
 async function createSite(slug) {
